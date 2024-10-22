@@ -2,7 +2,6 @@
 
 ## Todo
 
-- [ ] Słowny opis projektu
 - [ ] Słowniczek pojęć
 - [ ] Wymagania funkcjonalne
 - [ ] Wymagania niefunkcjonalne
@@ -10,8 +9,9 @@
 
 ## In Progress
 
-- [ ] Lista pytań do prowadzącego
+- [ ] Słowny opis projektu
 
 ## Done ✓
 
 - [x] Utworzyć repozytorium GtiHub
+- [x] Lista pytań do prowadzącego
