@@ -50,9 +50,6 @@ class Exporter:
                 txtfile.write(f"Description:\n{desc}\n\n")
     
     def export_to_pdf(self, images, save_path: str):
-        """
-        Exports descriptions to a PDF, embedding each image and its description.
-        """
         c = canvas.Canvas(save_path, pagesize=A4)
         width, height = A4
 
@@ -60,38 +57,34 @@ class Exporter:
         x_position = inch
 
         for img in images:
-            # Draw image (thumbnail-size to fit on page)
-            # Convert the image to a ReportLab-readable format
             try:
-                # Could do image resizing with PIL if desired
                 img_reader = ImageReader(img.path)
-                c.drawImage(img_reader, x_position, y_position - 3*inch, width=3*inch, height=3*inch)
+                # Draw image (reduce the space between image and text)
+                # Let's place the image at (x_position, y_position - 2.5 inches)
+                c.drawImage(img_reader, x_position, y_position - 2.5*inch, width=2.5*inch, height=2.5*inch)
             except Exception:
-                # If image can't be opened, skip or write a placeholder
                 c.drawString(x_position, y_position, "Error loading image")
 
-            # Draw description text
+            # Print description next to or just below the image
             description_text = img.description.content if img.description else ""
-            text_x = x_position + 3.2*inch
-            text_y = y_position - inch  # place text next to image
+            # Move text above or to the right (depending on design)
+            text_x = x_position + 2.6*inch  # small gap
+            text_y = y_position - 0.5*inch  # half-inch below top margin
 
             c.setFont("Helvetica", 11)
-            # Write file name
             c.drawString(text_x, y_position, f"Image: {os.path.basename(img.path)}")
-            # Write description
             c.drawString(text_x, text_y, "Description:")
-            # More advanced text wrapping can be done with textobjects or paragraphs
-            # For simplicity, just show first ~100 chars or so
+
+            # Wrap or place the description text
             wrapped_desc = self._wrap_text(description_text, 50)
-            offset = 20
+            line_height = 14
             for line in wrapped_desc:
-                text_y -= offset
+                text_y -= line_height
                 c.drawString(text_x, text_y, line)
 
-            # Move to next position
-            y_position -= 4*inch
-            # If we go beyond bottom margin, start a new page
-            if y_position < inch:
+            # After drawing image + text, move down a smaller step
+            y_position -= 3 * inch  # previously 4 or more
+            if y_position < 1.5 * inch:
                 c.showPage()
                 y_position = height - inch
 

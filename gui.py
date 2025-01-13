@@ -20,6 +20,7 @@ class GUI:
         style = ttk.Style(self.root)
         style.theme_use("clam")
 
+        # Global style overrides
         style.configure(
             ".",
             background="white",
@@ -32,12 +33,15 @@ class GUI:
         style.configure("TButton", background="white", foreground="black", padding=5)
         style.configure("TFrame", background="white")
         style.configure("TEntry", foreground="black")
+        style.configure("TCombobox", foreground="black")
 
         # Variables
         self.folder_path = tk.StringVar()
         self.save_path = tk.StringVar()
-        # 1) Set the default export format to CSV instead of Excel:
-        self.export_format = tk.StringVar(value="CSV")
+        self.export_format = tk.StringVar(value="CSV")  # Default export format
+
+        # Store images (with descriptions) after generation
+        self.images = []
 
         # Build the GUI
         self.create_widgets()
@@ -47,48 +51,111 @@ class GUI:
         container = ttk.Frame(self.root, padding=10)
         container.pack(fill="both", expand=True)
 
-        # Folder selection
-        folder_label = ttk.Label(container, text="Image Folder:")
-        folder_label.grid(row=0, column=0, sticky="w", pady=5)
-        folder_entry = ttk.Entry(container, textvariable=self.folder_path, width=50)
-        folder_entry.grid(row=0, column=1, padx=5, pady=5)
-        browse_folder_btn = ttk.Button(container, text="Browse", command=self.browse_folder)
-        browse_folder_btn.grid(row=0, column=2, padx=5, pady=5)
+        # --- Folder selection ---
+        folder_frame = ttk.Frame(container)
+        folder_frame.pack(fill="x", pady=5)
 
-        # Output file selection
-        file_label = ttk.Label(container, text="Output File:")
-        file_label.grid(row=1, column=0, sticky="w", pady=5)
-        file_entry = ttk.Entry(container, textvariable=self.save_path, width=50)
-        file_entry.grid(row=1, column=1, padx=5, pady=5)
-        browse_file_btn = ttk.Button(container, text="Save As", command=self.choose_save_path)
-        browse_file_btn.grid(row=1, column=2, padx=5, pady=5)
+        folder_label = ttk.Label(folder_frame, text="Image Folder:")
+        folder_label.pack(side="left")
 
-        # Export format selection
-        format_label = ttk.Label(container, text="Export Format:")
-        format_label.grid(row=2, column=0, sticky="w", pady=5)
-        format_combo = ttk.Combobox(
-            container,
-            textvariable=self.export_format,
-            values=["Excel", "CSV", "TXT", "PDF"],
-            state="readonly"
+        folder_entry = ttk.Entry(folder_frame, textvariable=self.folder_path, width=50)
+        folder_entry.pack(side="left", padx=5)
+
+        browse_folder_btn = ttk.Button(
+            folder_frame, 
+            text="Browse",
+            command=self.browse_folder,
+            cursor="hand2"  # pointer cursor
         )
-        format_combo.grid(row=2, column=1, padx=5, pady=5)
+        browse_folder_btn.pack(side="left", padx=5)
 
-        # Generate button
-        generate_btn = ttk.Button(container, text="Generate Descriptions", command=self.generate_descriptions)
-        generate_btn.grid(row=3, column=0, columnspan=3, pady=10)
+        # --- Generate Descriptions Button & Progress Bar in the same row ---
+        generate_frame = ttk.Frame(container)
+        generate_frame.pack(fill="x", pady=5)
 
-        # Progress bar
+        generate_btn = ttk.Button(
+            generate_frame,
+            text="1) Generate Descriptions",
+            command=self.generate_descriptions,
+            cursor="hand2"  # pointer cursor
+        )
+        generate_btn.pack(side="left", padx=5)
+
+        # Progress bar on the right of the Generate button
         self.progress_var = tk.IntVar(value=0)
         self.progress_bar = ttk.Progressbar(
-            container, orient="horizontal", length=400, mode="determinate", variable=self.progress_var
+            generate_frame,
+            orient="horizontal",
+            length=200,
+            mode="determinate",
+            variable=self.progress_var
         )
-        self.progress_bar.grid(row=4, column=0, columnspan=3, pady=5)
+        self.progress_bar.pack(side="right", padx=5)
 
-        # Log text (white background, black text)
+        # --- Export format selection ---
+        format_frame = ttk.Frame(container)
+        format_frame.pack(fill="x", pady=5)
+
+        format_label = ttk.Label(format_frame, text="Export Format:")
+        format_label.pack(side="left")
+
+        format_combo = ttk.Combobox(
+            format_frame,
+            textvariable=self.export_format,
+            values=["Excel", "CSV", "TXT", "PDF"],
+            state="readonly",
+            width=10
+        )
+        format_combo.pack(side="left", padx=5)
+
+        # --- Output file selection ---
+        output_frame = ttk.Frame(container)
+        output_frame.pack(fill="x", pady=5)
+
+        file_label = ttk.Label(output_frame, text="Output File:")
+        file_label.pack(side="left")
+
+        file_entry = ttk.Entry(output_frame, textvariable=self.save_path, width=50)
+        file_entry.pack(side="left", padx=5)
+
+        browse_file_btn = ttk.Button(
+            output_frame,
+            text="Save As",
+            command=self.choose_save_path,
+            cursor="hand2"  # pointer cursor
+        )
+        browse_file_btn.pack(side="left", padx=5)
+
+        # --- Export Button ---
+        export_frame = ttk.Frame(container)
+        export_frame.pack(fill="x", pady=5)
+
+        export_btn = ttk.Button(
+            export_frame,
+            text="2) Export",
+            command=self.export_descriptions,
+            cursor="hand2"  # pointer cursor
+        )
+        export_btn.pack(side="left", padx=5)
+
+        # --- Log text (white background, black text) ---
         self.log_text = tk.Text(container, height=10, bg="white", fg="black", wrap="word")
-        self.log_text.grid(row=5, column=0, columnspan=3, sticky="nsew", pady=5)
-        container.rowconfigure(5, weight=1)  # Make the text widget expandable
+        self.log_text.pack(fill="both", expand=True)
+
+        # --- Authors note (one line) ---
+        authors_note = (
+            "Authors: Mateusz F., Justyn R., Kasper S., "
+            "Mikołaj M., Konrad W., Krzysztof W."
+        )
+        authors_label = tk.Label(
+            container,
+            text=authors_note,
+            bg="white",
+            fg="black",
+            font=("Helvetica", 8, "italic")
+        )
+        # Align bottom-right (if enough horizontal space, it will appear on one line)
+        authors_label.pack(side="bottom", anchor="e", pady=5)
 
     def browse_folder(self):
         folder = filedialog.askdirectory(title="Select Folder with Images")
@@ -122,19 +189,20 @@ class GUI:
             self.save_path.set(path)
 
     def generate_descriptions(self):
+        """
+        1) Load images and generate descriptions.
+        2) Store results in self.images so user can export any time.
+        """
         folder = self.folder_path.get().strip()
-        save_path = self.save_path.get().strip()
         if not folder:
-            messagebox.showerror("Error", "Please select a valid folder with images.")
-            return
-        if not save_path:
-            messagebox.showerror("Error", "Please specify an output file.")
+            messagebox.showerror("Error", "Please select a folder with images first.")
             return
 
+        # Clear old logs
         self.log_text.delete("1.0", tk.END)
         self.log_text.insert(tk.END, f"Loading images from: {folder}\n")
 
-        # Ensure imports
+        # Ensure libraries are installed
         try:
             ImportManager.ensure_imports()
         except ImportError as e:
@@ -151,40 +219,66 @@ class GUI:
 
         total = len(processor.images)
         self.log_text.insert(tk.END, f"Found {total} images.\n")
-        self.progress_var.set(0)
+
         self.progress_bar["maximum"] = total
-        self.root.update_idletasks()
+        self.progress_var.set(0)
 
         generator = DescriptionGenerator()
         batch = Batch(processor, generator)
 
-        # Process images
-        index = 0
-        for img in processor.images:
-            self.log_text.insert(tk.END, f"Processing {os.path.basename(img.path)}...\n")
+        # Process
+        for i, img in enumerate(processor.images, start=1):
+            filename = os.path.basename(img.path)
+            self.log_text.insert(tk.END, f"Processing {filename}...\n")
             self.log_text.see(tk.END)
+
             # Generate description
             desc_text = batch.description_generator.generate_description(img.path)
-            img.description.content = desc_text  # store in existing object
 
-            index += 1
-            self.progress_var.set(index)
+            # If your Image class has `self.description = None` by default,
+            # either set it here or ensure your Image class initializes a Description object.
+            if img.description is None:
+                from core.description import Description
+                img.description = Description(desc_text)
+            else:
+                img.description.content = desc_text
+
+            self.progress_var.set(i)
             self.root.update_idletasks()
 
+        self.images = processor.images  # Store results in memory
         self.log_text.insert(tk.END, "All images processed.\n")
+        messagebox.showinfo(
+            "Done Generating",
+            "Descriptions generated. Now select export format and file, then click Export!"
+        )
 
-        # Export
-        exporter = Exporter()
+    def export_descriptions(self):
+        """
+        2) Export the previously generated descriptions to the chosen format.
+        """
+        if not self.images:
+            messagebox.showerror("Error", "No descriptions available. Please generate first.")
+            return
+
         export_format = self.export_format.get().lower()
+        save_path = self.save_path.get().strip()
+        if not save_path:
+            messagebox.showerror("Error", "Please select an output file to export.")
+            return
 
+        self.log_text.insert(tk.END, f"Exporting to {export_format.upper()}...\n")
+        self.log_text.see(tk.END)
+
+        exporter = Exporter()
         if export_format == "excel":
-            exporter.export_to_excel(processor.images, save_path)
+            exporter.export_to_excel(self.images, save_path)
         elif export_format == "csv":
-            exporter.export_to_csv(processor.images, save_path)
+            exporter.export_to_csv(self.images, save_path)
         elif export_format == "txt":
-            exporter.export_to_txt(processor.images, save_path)
-        else:  # pdf
-            exporter.export_to_pdf(processor.images, save_path)
+            exporter.export_to_txt(self.images, save_path)
+        else:
+            exporter.export_to_pdf(self.images, save_path)
 
         self.log_text.insert(tk.END, f"Exported to: {save_path}\n")
         messagebox.showinfo("Done", f"Finished exporting to {save_path}!")

@@ -1,9 +1,8 @@
 # core/image.py
+from .description import Description
 
 class Image:
-    """
-    Represents a single image to be described.
-    """
     def __init__(self, path: str):
         self.path = path
-        self.description = None  # Will hold an instance of Description
+        # Initialize with an empty Description so it's never None.
+        self.description = Description("")  
