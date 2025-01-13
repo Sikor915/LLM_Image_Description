@@ -1,5 +1,3 @@
-# gui.py
-
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -62,7 +60,7 @@ class GUI:
         folder_entry.pack(side="left", padx=5)
 
         browse_folder_btn = ttk.Button(
-            folder_frame, 
+            folder_frame,
             text="Browse",
             command=self.browse_folder,
             cursor="hand2"  # pointer cursor
@@ -107,6 +105,8 @@ class GUI:
             width=10
         )
         format_combo.pack(side="left", padx=5)
+        # Bind the format selection change event to update the file extension
+        format_combo.bind("<<ComboboxSelected>>", self.update_save_path_extension)
 
         # --- Output file selection ---
         output_frame = ttk.Frame(container)
@@ -167,19 +167,8 @@ class GUI:
         Based on chosen export format, set default extension.
         """
         selected_format = self.export_format.get().lower()
-        if selected_format == "excel":
-            ext = ".xlsx"
-            filetypes = [("Excel files", "*.xlsx")]
-        elif selected_format == "csv":
-            ext = ".csv"
-            filetypes = [("CSV files", "*.csv")]
-        elif selected_format == "txt":
-            ext = ".txt"
-            filetypes = [("Text files", "*.txt")]
-        else:  # pdf
-            ext = ".pdf"
-            filetypes = [("PDF files", "*.pdf")]
-
+        ext = self.get_extension(selected_format)
+        filetypes = [(f"{selected_format.upper()} files", f"*{ext}")]
         path = filedialog.asksaveasfilename(
             title="Save As",
             defaultextension=ext,
@@ -188,11 +177,29 @@ class GUI:
         if path:
             self.save_path.set(path)
 
+    def get_extension(self, format_type):
+        """
+        Return the correct file extension for the chosen format.
+        """
+        return {
+            "excel": ".xlsx",
+            "csv": ".csv",
+            "txt": ".txt",
+            "pdf": ".pdf"
+        }.get(format_type, ".csv")
+
+    def update_save_path_extension(self, event=None):
+        """
+        Update the file extension in the save path when the export format changes.
+        """
+        current_path = self.save_path.get().strip()
+        if current_path:
+            new_ext = self.get_extension(self.export_format.get().lower())
+            base_path, _ = os.path.splitext(current_path)  # Remove old extension
+            new_path = f"{base_path}{new_ext}"
+            self.save_path.set(new_path)
+
     def generate_descriptions(self):
-        """
-        1) Load images and generate descriptions.
-        2) Store results in self.images so user can export any time.
-        """
         folder = self.folder_path.get().strip()
         if not folder:
             messagebox.showerror("Error", "Please select a folder with images first.")
@@ -202,14 +209,12 @@ class GUI:
         self.log_text.delete("1.0", tk.END)
         self.log_text.insert(tk.END, f"Loading images from: {folder}\n")
 
-        # Ensure libraries are installed
         try:
             ImportManager.ensure_imports()
         except ImportError as e:
             messagebox.showerror("Missing Library", str(e))
             return
 
-        # Load images
         processor = ImageProcessor(folder)
         try:
             processor.load_images()
@@ -226,17 +231,11 @@ class GUI:
         generator = DescriptionGenerator()
         batch = Batch(processor, generator)
 
-        # Process
         for i, img in enumerate(processor.images, start=1):
             filename = os.path.basename(img.path)
             self.log_text.insert(tk.END, f"Processing {filename}...\n")
             self.log_text.see(tk.END)
-
-            # Generate description
             desc_text = batch.description_generator.generate_description(img.path)
-
-            # If your Image class has `self.description = None` by default,
-            # either set it here or ensure your Image class initializes a Description object.
             if img.description is None:
                 from core.description import Description
                 img.description = Description(desc_text)
@@ -246,7 +245,7 @@ class GUI:
             self.progress_var.set(i)
             self.root.update_idletasks()
 
-        self.images = processor.images  # Store results in memory
+        self.images = processor.images
         self.log_text.insert(tk.END, "All images processed.\n")
         messagebox.showinfo(
             "Done Generating",
@@ -254,23 +253,21 @@ class GUI:
         )
 
     def export_descriptions(self):
-        """
-        2) Export the previously generated descriptions to the chosen format.
-        """
         if not self.images:
             messagebox.showerror("Error", "No descriptions available. Please generate first.")
             return
 
-        export_format = self.export_format.get().lower()
         save_path = self.save_path.get().strip()
         if not save_path:
             messagebox.showerror("Error", "Please select an output file to export.")
             return
 
+        export_format = self.export_format.get().lower()
+        exporter = Exporter()
+
         self.log_text.insert(tk.END, f"Exporting to {export_format.upper()}...\n")
         self.log_text.see(tk.END)
 
-        exporter = Exporter()
         if export_format == "excel":
             exporter.export_to_excel(self.images, save_path)
         elif export_format == "csv":
