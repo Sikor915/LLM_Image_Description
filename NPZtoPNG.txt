@@ -1,0 +1,79 @@
+import math
+
+from torchvision import models, transforms
+from numpy import load
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image as im
+from PIL import Image as pil
+import csv
+
+
+import os
+
+def get_file_names(folder_path):
+    """
+    Takes the path to a folder and returns a list containing
+    the names of all files in that folder.
+
+    Parameters:
+    folder_path (str): The path to the folder.
+
+    Returns:
+    list: A list of file names.
+    """
+    items = os.listdir(folder_path)
+    files = [item for item in items if os.path.isfile(os.path.join(folder_path, item))]
+    return files
+    folder_path = input("Enter the path to the folder: ")
+    file_names = get_file_names(folder_path)
+    print("Files in the folder:")
+    print(file_names)
+npz_path = 'C:/Users/Mikołaj/Downloads/train_data/train_data/train_data/'
+gt_path = 'C:/Users/Mikołaj/Downloads/train_data/train_data/train_gt.csv'
+wavelength_path = 'C:/Users/Mikołaj/Downloads/train_data/train_data/wavelengths.csv'
+data = load('C:/Users/Mikołaj/Downloads/train_data/train_data/train_data/1700.npz')
+gt_df = pd.read_csv(gt_path)
+wavelength_df = pd.read_csv(wavelength_path)
+gt_df[gt_df['sample_index']==1731]
+fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+band_id = 1
+#niebieski 24
+#czerwony 36
+# for x in range(122):
+wavelength = wavelength_df.loc[band_id-1]
+current_band = 1
+how_tall_im = 30
+how_wide_im = 50
+current_x = 0
+for i in range(1100, 1101):
+    file_path = npz_path + str(i) + ".npz"
+    print('__________________')
+    print()
+    print(file_path)
+    print('__________________')
+    for j in range(1, 149, 50):
+        fig, axs = plt.subplots(1, 2, figsize=(5, 3))
+        band_id = j
+        wavelength = wavelength_df.loc[band_id - 1]
+        with np.load(file_path) as npz:
+            arr = np.ma.MaskedArray(**npz)
+        axs[0].imshow(arr[band_id, :, :].data)
+        axs[1].imshow(arr[band_id, :, :])
+        plt.suptitle(f'Representation of band {int(wavelength["band_no"])}→({wavelength["wavelength"]} nm)',
+                     fontsize=15)
+        plt.show()
+    red_band = arr[60, :, :].data
+    green_band = arr[16, :, :].data
+    blue_band = arr[4, :, :].data
+    red_band = red_band / np.max(red_band)
+    blue_band = blue_band / np.max(blue_band)
+    green_band = green_band / np.max(green_band)
+    rgb_image = np.dstack((red_band, green_band, blue_band))
+    rgb_image_normalized = (rgb_image * 255).astype(np.uint8)
+    image = im.fromarray(rgb_image_normalized)
+    output_path = "C:/Users/Mikołaj/Desktop/Images/Image" + str(i) + ".png"
+    image.save(output_path)
+    plt.imshow(rgb_image)
+    plt.show()
